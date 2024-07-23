@@ -1,0 +1,107 @@
+version: 2
+
+sources:
+  - name: layer_bronze
+    database: newnessie
+    freshness: # by default for all tables in this database
+      warn_after: {count: 2, period: day} # give a warning if the source hasn't been updated in 2 days
+      error_after: {count: 3, period: day} # error if the source hasn't been updated in 3 days
+    schema: bronze
+    tables:
+      - name: raw_sales
+        identifier: sales
+        freshness:
+          warn_after: {count: 1, period: hour}
+          error_after: {count: 2, period: day}
+        loaded_at_field: "loaded_at"
+        description: 'Raw JSON sales data from Minio'
+        columns:
+          - name: id
+            description: "The transaction id"
+            tests:
+              - not_null
+          - name: amount_paid
+            description: "The amount paid for the transaction"
+            tests:
+              - not_null
+          - name: product_id
+            description: "The product id"
+            tests:
+              - not_null
+    
+  - name: layer_silver
+    database: newnessie
+    schema: bi-modeling-warehouse.silver
+    tables:
+      - name: dim_customer
+        description: 'Customer dimension table'
+        columns:
+          - name: id
+            description: "The customer id"
+            tests:
+              - unique
+              - not_null
+          - name: first_name
+            description: "The customer's first name" 
+      - name: dim_employee
+        description: 'Employee dimension table'
+        columns:
+          - name: id
+            description: "The employee id"
+            tests:
+              - unique
+              - not_null
+          - name: first_name
+            description: "The employee name"
+            tests:
+              - not_null
+          - name: last_name
+            description: "The employee last name"
+            tests:
+              - not_null
+      - name: dim_product
+        description: 'Product dimension table'
+        columns:
+          - name: id
+            description: "The product id"
+            tests:
+              - unique
+              - not_null
+          - name: name
+            description: "The product name"
+            tests:
+              - not_null
+      - name: fact_sales
+        description: 'Sales fact table'
+        columns:
+          - name: id
+            description: "The transaction id"
+            tests:
+              - not_null
+          - name: customer_id
+            description: "The customer id"
+            tests:
+              - not_null
+          - name: employee_id
+            description: "The employee id"
+            tests:
+              - not_null
+          - name: product_id
+            description: "The product id"
+            tests:
+              - not_null
+          - name: amount_paid
+            description: "The amount paid for the transaction"
+            tests:
+              - not_null
+          - name: transaction_date
+            description: "The date of the transaction"
+  
+  - name: gold
+    database: newnessie
+    schema: gold
+    tables:
+      - name: daily_sales_summary
+        description: 'It is a table that summarizes the daily sales, containing valuable information for the business'
+        
+          
