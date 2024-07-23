@@ -23,11 +23,10 @@ NESSIE_URL = os.getenv('NESSIE_URL')
 NESSIE_WAREHOUSE = os.getenv('NESSIE_WAREHOUSE')
 
 jars = [
-    "/Users/frederic/Desktop/jars/iceberg-spark-runtime-3.5_2.12-1.5.2.jar",
-    "/Users/frederic/Desktop/jars/nessie-spark-extensions-3.5_2.12-0.92.0.jar",
-    "/Users/frederic/Desktop/jars/aws-java-sdk-core-1.12.757.jar",
-    "/Users/frederic/Desktop/jars/aws-java-sdk-s3-1.12.757.jar",
-    "/Users/frederic/Desktop/jars/s3-2.26.19.jar",
+    "jars/iceberg-spark-runtime-3.5_2.12-1.5.2.jar",
+    "jars/nessie-spark-extensions-3.5_2.12-0.92.0.jar",
+    "jars/aws-java-sdk-core-1.12.757.jar",
+    "jars/aws-java-sdk-s3-1.12.757.jar",
 ]
 
 
@@ -35,7 +34,6 @@ def create_spark_session() -> SparkSession:
     spark = SparkSession.builder \
         .appName("Iceberg with Nessie and MinIO") \
         .config("spark.eventLog.enabled", "true") \
-        .config("spark.eventLog.dir", "file:///Users/frederic/Desktop/spark-events") \
         .config("spark.jars", ",".join(jars)) \
         .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:3.3.1,org.apache.hadoop:hadoop-common:3.3.1,"
                                        "software.amazon.awssdk:s3:2.26.0,software.amazon.awssdk:aws-core:2.26.0,"
