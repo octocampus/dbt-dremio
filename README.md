@@ -36,8 +36,8 @@ NESSIE_WAREHOUSE=<NESSIE_WAREHOUSE>
 DBT_DREMIO_DIR=<CHEMIN VERS LE REPERTOIRE OU SE TROUVE LA PARTIE DBT DU PROJET>
 PROJECT_ROOT_DIR=<CHEMIN VERS LE REPERTOIRE DU PROJET GLOBAL>
 ```
-- créer le fichier profiles.yml dans le repertoire .dbt, en specifiant les éléments de connexion à dremio. Dans notre cas le profil de dremio doit avoir pour nom bi_modeling_dremio (le meme que dans le fichier dbt_projetc.yml) 
-```bash
+- créer le fichier profiles.yml dans le repertoire .dbt, en specifiant les éléments de connexion à dremio. Dans notre cas le profil de dremio doit avoir pour nom bi_modeling_dremio (le meme que dans le fichier dbt_project.yml) 
+
 
 ## 3. Utilisation
 Une fois les prérequis installés et le fichier .env configuré, vous pouvez lancer le projet en executant les différents composants du projet.  
