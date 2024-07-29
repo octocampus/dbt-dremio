@@ -4,22 +4,6 @@ import pyspark
 from pyspark.sql.types import StructField, IntegerType
 
 if __name__ == "__main__":
-    """MINIO_ENDPOINT = "https://minios3.campus.clusterdiali.me"
-    MINIO_ACCESS_KEY = "QiH0yo6ngB529dM7htEE"
-    MINIO_SECRET_KEY = "WcMjbiUHcKXGrrJXpjC8afEc0oVCrCSzdAgwy0wl"
-    BUCKET_NAME = "bi-modeling-data" """
-
-    MINIO_ENDPOINT = "212.47.236.230:9000"
-    MINIO_ACCESS_KEY = "coVKGA0YmYt0fmaBOGrz"
-    MINIO_SECRET_KEY = "6umzPdeL1yRvXr7jhJbOpyHspmSSSF7J7wxh8mBk"
-    BUCKET_NAME = "bi-modeling-data"
-
-    STARBURST_URL = "jdbc:trino://195.154.69.87:8443/"
-    STARBURST_USER = "starburst_service"
-    STARBURST_CATALOG = "hive"
-    STARBURST_SCHEMA = "bi_modeling_test_gold"
-    trino_jdbc_jar = "/Users/frederic/Desktop/jars/trino-jdbc-448.jar"
-
 
     # Créer la session Spark avec les fichiers JAR ajoutés manuellement
     spark = SparkSession.builder \
