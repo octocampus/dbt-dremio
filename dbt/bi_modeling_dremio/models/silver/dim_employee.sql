@@ -1,7 +1,7 @@
 {{ config(
     materialized='incremental',
     unique_key='id',
-    schema='silver'
+    schema='bi-modeling-warehouse.silver'
 ) }}
 
 with employees as (

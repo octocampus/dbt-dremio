@@ -33,7 +33,7 @@ class MinioUtils:
             endpoint=self.MINIO_ENDPOINT,
             access_key=self.MINIO_ACCESS_KEY,
             secret_key=self.MINIO_SECRET_KEY,
-            secure=False
+            secure=True
         )
         latest_file_name, last_modified = get_latest_file(minio_client, bucket_path, data_file_prefix)
         data = session.read.option("header", True).option("multiLine", "true") \
@@ -49,7 +49,7 @@ class MinioUtils:
             endpoint=self.MINIO_ENDPOINT,
             access_key=self.MINIO_ACCESS_KEY,
             secret_key=self.MINIO_SECRET_KEY,
-            secure=False
+            secure=True
         )
 
         try:
@@ -73,7 +73,7 @@ class MinioUtils:
             endpoint=self.MINIO_ENDPOINT,
             access_key=self.MINIO_ACCESS_KEY,
             secret_key=self.MINIO_SECRET_KEY,
-            secure=False
+            secure=True
         )
 
         try:
@@ -88,7 +88,7 @@ class MinioUtils:
             endpoint=self.MINIO_ENDPOINT,
             access_key=self.MINIO_ACCESS_KEY,
             secret_key=self.MINIO_SECRET_KEY,
-            secure=False
+            secure=True
         )
 
         try:

@@ -2,11 +2,11 @@ version: 2
 
 sources:
   - name: layer_bronze
-    database: newnessie
+    database: fred_test
     freshness: # by default for all tables in this database
       warn_after: {count: 2, period: day} # give a warning if the source hasn't been updated in 2 days
       error_after: {count: 3, period: day} # error if the source hasn't been updated in 3 days
-    schema: bronze
+    schema: bi-modeling-warehouse.bronze
     tables:
       - name: raw_sales
         identifier: sales
@@ -30,7 +30,7 @@ sources:
               - not_null
     
   - name: layer_silver
-    database: newnessie
+    database: fred_test
     schema: bi-modeling-warehouse.silver
     tables:
       - name: dim_customer

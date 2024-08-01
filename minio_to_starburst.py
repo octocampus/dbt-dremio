@@ -1,76 +1,85 @@
+import os
+from datetime import datetime
+
+from dotenv import load_dotenv
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import *
-import pyspark
-from pyspark.sql.types import StructField, IntegerType
+from pyspark.sql.functions import lit, from_utc_timestamp
+from minio import Minio
+from utils.minio_utils import MinioUtils
 
-if __name__ == "__main__":
-    """MINIO_ENDPOINT = "https://minios3.campus.clusterdiali.me"
-    MINIO_ACCESS_KEY = "QiH0yo6ngB529dM7htEE"
-    MINIO_SECRET_KEY = "WcMjbiUHcKXGrrJXpjC8afEc0oVCrCSzdAgwy0wl"
-    BUCKET_NAME = "bi-modeling-data" """
+dotenv_path = os.path.join(os.path.dirname(__file__), 'config', '.env')
+load_dotenv(dotenv_path)
 
-    MINIO_ENDPOINT = "212.47.236.230:9000"
-    MINIO_ACCESS_KEY = "coVKGA0YmYt0fmaBOGrz"
-    MINIO_SECRET_KEY = "6umzPdeL1yRvXr7jhJbOpyHspmSSSF7J7wxh8mBk"
-    BUCKET_NAME = "bi-modeling-data"
+MINIO_ENDPOINT = os.getenv('MINIO_ENDPOINT')
+MINIO_ACCESS_KEY = os.getenv('MINIO_ACCESS_KEY')
+MINIO_SECRET_KEY = os.getenv('MINIO_SECRET_KEY')
+MINIO_BUCKET = os.getenv('MINIO_BUCKET')
 
-    STARBURST_URL = "jdbc:trino://195.154.69.87:8443/"
-    STARBURST_USER = "starburst_service"
-    STARBURST_CATALOG = "hive"
-    STARBURST_SCHEMA = "bi_modeling_test_gold"
-    trino_jdbc_jar = "/Users/frederic/Desktop/jars/trino-jdbc-448.jar"
+STARBURST_HOST = "195.154.74.227"
+STARBURST_PORT = 8443
+STARBURST_USER = "starburst_service"
+STARBURST_CATALOG = "iceberg_minio_2"
+STARBURST_SCHEMA = "bi_modeling_bronze"
+
+# JAR for the Starburst JDBC driver
+jars = [
+    "jars/trino-jdbc-451.jar"
+]
 
 
-    # Créer la session Spark avec les fichiers JAR ajoutés manuellement
+def create_spark_session() -> SparkSession:
     spark = SparkSession.builder \
-        .appName("MinioToStarburst") \
-        .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:3.2.0") \
-        .config("spark.jars", trino_jdbc_jar) \
-        .config("spark.hadoop.fs.s3a.endpoint", MINIO_ENDPOINT) \
+        .appName("Spark with Starburst") \
+        .config("spark.eventLog.enabled", "true") \
+        .config("spark.eventLog.dir", "logs") \
+        .config("spark.jars", ",".join(jars)) \
+        .config("spark.sql.catalogImplementation", "in-memory") \
+        .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:3.3.1,org.apache.hadoop:hadoop-common:3.3.1,") \
         .config("spark.hadoop.fs.s3a.access.key", MINIO_ACCESS_KEY) \
         .config("spark.hadoop.fs.s3a.secret.key", MINIO_SECRET_KEY) \
-        .config("spark.hadoop.fs.s3a.path.style.access", "true") \
-        .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
+        .config("spark.hadoop.fs.s3a.endpoint", MINIO_ENDPOINT) \
         .config("spark.hadoop.fs.s3a.aws.credentials.provider", "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider") \
-        .config("spark.eventLog.gcMetrics.youngGenerationGarbageCollectors", "G1 Young Generation") \
-        .config("spark.eventLog.gcMetrics.oldGenerationGarbageCollectors", "G1 Old Generation") \
-        .config("spark.sql.debug.maxToStringFields", 1000) \
+        .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
+        .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "true") \
+        .config("spark.hadoop.fs.s3a.path.style.access", "true") \
+        .config("spark.sql.debug.maxToStringFields", "1000") \
         .getOrCreate()
 
-    connection_properties = {
-        "user": STARBURST_USER,
-        "driver": "io.trino.jdbc.TrinoDriver"
+    return spark
+
+
+if __name__ == "__main__":
+    spark = create_spark_session()
+    my_minio = MinioUtils(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY)
+
+    sales_data = my_minio.read_data_from_minio(spark, MINIO_BUCKET, 'sales')
+
+    # Ajouter la colonne loaded_at
+    loaded_at_col = from_utc_timestamp(lit(datetime.now().strftime('%Y-%m-%d %H:%M:%S')).cast("timestamp"), "UTC+1")
+    sales_data = sales_data.withColumn("loaded_at", loaded_at_col)
+
+    # Configuration JDBC pour Starburst
+    jdbc_url = f"jdbc:trino://{STARBURST_HOST}:{STARBURST_PORT}"
+    jdbc_properties = {
+        "driver": "io.trino.jdbc.TrinoDriver",
+        "user": STARBURST_USER
     }
 
-    # Lire les données depuis MinIO
-    df = spark.read.option("header", True).option("multiLine", "true") \
-        .json(f"s3a://{BUCKET_NAME}/sales_2024-07-10-20-47-33.json")
+    # Écriture des données dans Starburst
+    print("Writing data to Starburst-----------------------------------\n"
+          "-------------------------------------------\n\n")
 
-    # Afficher les données
-    print(df.dtypes)
+    sales_data.write \
+        .jdbc(url=jdbc_url, table=f"{STARBURST_CATALOG}.{STARBURST_SCHEMA}.sales", mode="append",
+              properties=jdbc_properties)
 
+    """sales_data.write \
+                .format("jdbc") \
+                .option("url", targeturl) \
+                .option("dbtable", table_name) \
+                .option("user", username) \
+                .option("password", password) \
+                .mode("append") \
+                .save()"""
 
-    # Définir une fonction pour mapper les types de colonnes
-    def map_spark_to_sql_type(spark_type):
-        type_mapping = {
-            'string': 'VARCHAR(100)'
-        }
-        return type_mapping.get(spark_type, spark_type)
-
-
-    # Créer la chaîne de types de colonnes pour createTableColumnTypes
-    column_types = ", ".join([f'{name} {map_spark_to_sql_type(dtype)}' for name, dtype in df.dtypes])
-
-    # Afficher le mapping des types de colonnes
-    print(column_types)
-
-    # Écrire les données dans Starburst
-    df.write \
-        .format("jdbc") \
-        .option("url", STARBURST_URL) \
-        .option("dbtable", f"{STARBURST_CATALOG}.{STARBURST_SCHEMA}.test_table") \
-        .option("createTableColumnTypes", column_types) \
-        .mode("overwrite") \
-        .options(**connection_properties) \
-        .save()
-
+    spark.stop()
