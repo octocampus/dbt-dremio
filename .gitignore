@@ -4,7 +4,7 @@
 # Ignorer les environnements virtuels
 /venv
 /.venv
-
+/logs
 # Ignorer les dossiers dbt spécifiques
 /dbt/*/target/
 /dbt/*/dbt_packages/
