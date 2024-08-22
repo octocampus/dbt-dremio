@@ -3,9 +3,10 @@ from datetime import datetime
 
 from dotenv import load_dotenv
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import lit, from_utc_timestamp
+from pyspark.sql.functions import lit, from_utc_timestamp, to_timestamp
 from minio import Minio
 from utils.minio_utils import MinioUtils
+import ibis
 
 dotenv_path = os.path.join(os.path.dirname(__file__), 'config', '.env')
 load_dotenv(dotenv_path)
@@ -49,37 +50,30 @@ def create_spark_session() -> SparkSession:
 
 
 if __name__ == "__main__":
+    con = ibis.trino.connect(
+        user=STARBURST_USER,
+        host=STARBURST_HOST,
+        port=STARBURST_PORT,
+        database=STARBURST_CATALOG,
+        schema=STARBURST_SCHEMA,
+    )
+
     spark = create_spark_session()
+
+    # Load data from minio
     my_minio = MinioUtils(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY)
-
     sales_data = my_minio.read_data_from_minio(spark, MINIO_BUCKET, 'sales')
-
-    # Ajouter la colonne loaded_at
+    # On va ajouter la colonne loaded_at qui va etre la date actuelle
+    sales_data = sales_data.withColumn("transaction_date", to_timestamp("transaction_date"))
     loaded_at_col = from_utc_timestamp(lit(datetime.now().strftime('%Y-%m-%d %H:%M:%S')).cast("timestamp"), "UTC+1")
     sales_data = sales_data.withColumn("loaded_at", loaded_at_col)
+    sales_data_df = sales_data.toPandas()
+    # On va juste garder pour le moment 300 lignes
+    sales_data_df = sales_data_df.head(150)
 
-    # Configuration JDBC pour Starburst
-    jdbc_url = f"jdbc:trino://{STARBURST_HOST}:{STARBURST_PORT}"
-    jdbc_properties = {
-        "driver": "io.trino.jdbc.TrinoDriver",
-        "user": STARBURST_USER
-    }
+    print("Data loaded from Minio successfully")
+    # Write data to Starburst
+    print("Writing data to Starburst")
+    con.insert('sales', sales_data_df, database=f"{STARBURST_CATALOG}.{STARBURST_SCHEMA}", overwrite=False)
+    print("Data loaded to Starburst successfully")
 
-    # Écriture des données dans Starburst
-    print("Writing data to Starburst-----------------------------------\n"
-          "-------------------------------------------\n\n")
-
-    sales_data.write \
-        .jdbc(url=jdbc_url, table=f"{STARBURST_CATALOG}.{STARBURST_SCHEMA}.sales", mode="append",
-              properties=jdbc_properties)
-
-    """sales_data.write \
-                .format("jdbc") \
-                .option("url", targeturl) \
-                .option("dbtable", table_name) \
-                .option("user", username) \
-                .option("password", password) \
-                .mode("append") \
-                .save()"""
-
-    spark.stop()
